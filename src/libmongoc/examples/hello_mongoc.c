@@ -18,7 +18,8 @@
 int
 main (int argc, char *argv[])
 {
-   const char *uri_str = "mongodb://localhost:27017";
+   const char *uri_string = "mongodb://localhost:27017";
+   mongoc_uri_t *uri;
    mongoc_client_t *client;
    mongoc_database_t *database;
    mongoc_collection_t *collection;
@@ -36,13 +37,29 @@ main (int argc, char *argv[])
     * Optionally get MongoDB URI from command line
     */
    if (argc > 1) {
-      uri_str = argv[1];
+      uri_string = argv[1];
+   }
+
+   /*
+    * Safely create a MongoDB URI object from the given string
+    */
+   uri = mongoc_uri_new_with_error (uri_string, &error);
+   if (!uri) {
+      fprintf (stderr,
+               "failed to parse URI: %s\n"
+               "error message:       %s\n",
+               uri_string,
+               error.message);
+      return EXIT_FAILURE;
    }
 
    /*
     * Create a new client instance
     */
-   client = mongoc_client_new (uri_str);
+   client = mongoc_client_new_from_uri (uri);
+   if (!client) {
+      return EXIT_FAILURE;
+   }
 
    /*
     * Register the application name so we can track it in the profile logs
@@ -89,6 +106,7 @@ main (int argc, char *argv[])
     */
    mongoc_collection_destroy (collection);
    mongoc_database_destroy (database);
+   mongoc_uri_destroy (uri);
    mongoc_client_destroy (client);
    mongoc_cleanup ();
 

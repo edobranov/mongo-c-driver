@@ -56,6 +56,7 @@ mongoc_dump_collection (mongoc_client_t *client,
    unlink (path);
 #endif
 
+   fprintf (stderr, "%s\n", path);
    stream = fopen (path, "w");
    if (!stream) {
       fprintf (stderr, "Failed to open \"%s\", aborting.\n", path);
@@ -196,7 +197,9 @@ main (int argc, char *argv[])
    const char *host = "127.0.0.1";
    uint16_t port = 27017;
    bool ssl = false;
-   char *uri;
+   char *uri_string;
+   mongoc_uri_t *uri;
+   bson_error_t error;
    int ret;
    int i;
 
@@ -226,14 +229,24 @@ main (int argc, char *argv[])
       }
    }
 
-   uri = bson_strdup_printf ("mongodb://%s:%hu/%s?appname=dump-example&ssl=%s",
-                             host,
-                             port,
-                             database ? database : "",
-                             ssl ? "true" : "false");
+   uri_string =
+      bson_strdup_printf ("mongodb://%s:%hu/%s?appname=dump-example&ssl=%s",
+                          host,
+                          port,
+                          database ? database : "",
+                          ssl ? "true" : "false");
 
-   if (!(client = mongoc_client_new (uri))) {
-      fprintf (stderr, "Invalid connection URI: %s\n", uri);
+   uri = mongoc_uri_new_with_error (uri_string, &error);
+   if (!uri) {
+      fprintf (stderr,
+               "failed to parse URI: %s\n"
+               "error message:       %s\n",
+               uri_string,
+               error.message);
+      return EXIT_FAILURE;
+   }
+
+   if (!(client = mongoc_client_new_from_uri (uri))) {
       return EXIT_FAILURE;
    }
 
@@ -241,6 +254,7 @@ main (int argc, char *argv[])
 
    ret = mongoc_dump (client, database, collection);
 
+   mongoc_uri_destroy (uri);
    mongoc_client_destroy (client);
 
    return ret;

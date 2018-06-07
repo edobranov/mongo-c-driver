@@ -14,7 +14,8 @@ main (int argc, char *argv[])
    mongoc_collection_t *collection = NULL;
    mongoc_cursor_t *cursor = NULL;
    bson_error_t error;
-   const char *uristr = "mongodb://127.0.0.1/";
+   const char *uri_string = "mongodb://127.0.0.1/";
+   mongoc_uri_t *uri;
    const char *authuristr;
    bson_t roles;
    bson_t query;
@@ -37,10 +38,18 @@ main (int argc, char *argv[])
 
    mongoc_init ();
 
-   client = mongoc_client_new (uristr);
+   uri = mongoc_uri_new_with_error (uri_string, &error);
+   if (!uri) {
+      fprintf (stderr,
+               "failed to parse URI: %s\n"
+               "error message:       %s\n",
+               uri_string,
+               error.message);
+      return EXIT_FAILURE;
+   }
 
+   client = mongoc_client_new_from_uri (uri);
    if (!client) {
-      fprintf (stderr, "Failed to parse URI.\n");
       return EXIT_FAILURE;
    }
 
@@ -86,6 +95,10 @@ CLEANUP:
 
    if (collection) {
       mongoc_collection_destroy (collection);
+   }
+
+   if (uri) {
+      mongoc_uri_destroy (uri);
    }
 
    if (client) {
