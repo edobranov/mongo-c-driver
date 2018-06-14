@@ -1,0 +1,253 @@
+/*
+ * Created by Evgeni Dobranov on 6/14/18.
+ */
+
+#include "bson-fnv.h"
+#include "TestSuite.h"
+
+/* TEST macro does not include trailing NUL byte in the test vector */
+#define TEST(x) {x, (sizeof(x)-1)}
+/* TEST0 macro includes the trailing NUL byte in the test vector */
+#define TEST0(x) {x, sizeof(x)}
+/* REPEAT500 - repeat a string 500 times */
+#define R500(x) R100(x)R100(x)R100(x)R100(x)R100(x)
+#define R100(x) R10(x)R10(x)R10(x)R10(x)R10(x)R10(x)R10(x)R10(x)R10(x)R10(x)
+#define R10(x) x x x x x x x x x x
+
+struct strData {
+   void *buf;
+   unsigned len;
+};
+
+struct test_vector {
+   struct strData str;   /* start of test vector buffer */
+   u_int32_t hash;       /* length of test vector */
+};
+
+static void
+test_fnv_compare_vals (void)
+{
+   unsigned i;
+
+   struct test_vector v[] = {
+      { TEST(""), (u_int32_t) 0x1c9d44 },
+      { TEST("a"), (u_int32_t) 0x0c29c8 },
+      { TEST("b"), (u_int32_t) 0x0c2d02 },
+      { TEST("c"), (u_int32_t) 0x0c2cb4 },
+      { TEST("d"), (u_int32_t) 0x0c2492 },
+      { TEST("e"), (u_int32_t) 0x0c2200 },
+      { TEST("f"), (u_int32_t) 0x0c277a },
+      { TEST("fo"), (u_int32_t) 0x22e820 },
+      { TEST("foo"), (u_int32_t) 0xf37e7e },
+      { TEST("foob"), (u_int32_t) 0x5076d0 },
+      { TEST("fooba"), (u_int32_t) 0xaaa1b3 },
+      { TEST("foobar"), (u_int32_t) 0x9cf9d7 },
+      { TEST0(""), (u_int32_t) 0x0c5d1a },
+      { TEST0("a"), (u_int32_t) 0x24d06f },
+      { TEST0("b"), (u_int32_t) 0x2c3fe2 },
+      { TEST0("c"), (u_int32_t) 0x29c561 },
+      { TEST0("d"), (u_int32_t) 0x1d61b0 },
+      { TEST0("e"), (u_int32_t) 0x1ae633 },
+      { TEST0("f"), (u_int32_t) 0x2255de },
+      { TEST0("fo"), (u_int32_t) 0xf39f58 },
+      { TEST0("foo"), (u_int32_t) 0x50ac14 },
+      { TEST0("foob"), (u_int32_t) 0xab3aa7 },
+      { TEST0("fooba"), (u_int32_t) 0x9c4c6f },
+      { TEST0("foobar"), (u_int32_t) 0x1c9eb4 },
+      { TEST("ch"), (u_int32_t) 0x299f11 },
+      { TEST("cho"), (u_int32_t) 0x85801c },
+      { TEST("chon"), (u_int32_t) 0x29778b },
+      { TEST("chong"), (u_int32_t) 0x46b985 },
+      { TEST("chongo"), (u_int32_t) 0x564ec0 },
+      { TEST("chongo "), (u_int32_t) 0xdd5c0c },
+      { TEST("chongo w"), (u_int32_t) 0x77eded },
+      { TEST("chongo wa"), (u_int32_t) 0xca9677 },
+      { TEST("chongo was"), (u_int32_t) 0xeb9b9a },
+      { TEST("chongo was "), (u_int32_t) 0xe67a30 },
+      { TEST("chongo was h"), (u_int32_t) 0xd32f6a },
+      { TEST("chongo was he"), (u_int32_t) 0x743fc8 },
+      { TEST("chongo was her"), (u_int32_t) 0x006376 },
+      { TEST("chongo was here"), (u_int32_t) 0x9c99cb },
+      { TEST("chongo was here!"), (u_int32_t) 0x8524b9 },
+      { TEST("chongo was here!\n"), (u_int32_t) 0x993001 },
+      { TEST0("ch"), (u_int32_t) 0x85c7d6 },
+      { TEST0("cho"), (u_int32_t) 0x29fe8b },
+      { TEST0("chon"), (u_int32_t) 0x469249 },
+      { TEST0("chong"), (u_int32_t) 0x56698e },
+      { TEST0("chongo"), (u_int32_t) 0xdd8e4c },
+      { TEST0("chongo "), (u_int32_t) 0x787611 },
+      { TEST0("chongo w"), (u_int32_t) 0xca6243 },
+      { TEST0("chongo wa"), (u_int32_t) 0xeaf0e4 },
+      { TEST0("chongo was"), (u_int32_t) 0xe648b0 },
+      { TEST0("chongo was "), (u_int32_t) 0xd355aa },
+      { TEST0("chongo was h"), (u_int32_t) 0x740522 },
+      { TEST0("chongo was he"), (u_int32_t) 0x004d4e },
+      { TEST0("chongo was her"), (u_int32_t) 0x9c09a7 },
+      { TEST0("chongo was here"), (u_int32_t) 0x84f129 },
+      { TEST0("chongo was here!"), (u_int32_t) 0x993a9d },
+      { TEST0("chongo was here!\n"), (u_int32_t) 0x27dfcd },
+      { TEST("cu"), (u_int32_t) 0x298129 },
+      { TEST("cur"), (u_int32_t) 0x5637c9 },
+      { TEST("curd"), (u_int32_t) 0xb9140f },
+      { TEST("curds"), (u_int32_t) 0x5bf5a7 },
+      { TEST("curds "), (u_int32_t) 0xc42805 },
+      { TEST("curds a"), (u_int32_t) 0xcc0e97 },
+      { TEST("curds an"), (u_int32_t) 0x3b4c5d },
+      { TEST("curds and"), (u_int32_t) 0x59f0a7 },
+      { TEST("curds and "), (u_int32_t) 0x94de0b },
+      { TEST("curds and w"), (u_int32_t) 0x5a0a72 },
+      { TEST("curds and wh"), (u_int32_t) 0xbee56f },
+      { TEST("curds and whe"), (u_int32_t) 0x8363fd },
+      { TEST("curds and whey"), (u_int32_t) 0xd5346c },
+      { TEST("curds and whey\n"), (u_int32_t) 0xa14715 },
+      { TEST0("cu"), (u_int32_t) 0x56b1b5 },
+      { TEST0("cur"), (u_int32_t) 0xb8e81f },
+      { TEST0("curd"), (u_int32_t) 0x5b4a33 },
+      { TEST0("curds"), (u_int32_t) 0xc3f6c5 },
+      { TEST0("curds "), (u_int32_t) 0xcc3f23 },
+      { TEST0("curds a"), (u_int32_t) 0x3b0a59 },
+      { TEST0("curds an"), (u_int32_t) 0x59c467 },
+      { TEST0("curds and"), (u_int32_t) 0x9510cb },
+      { TEST0("curds and "), (u_int32_t) 0x59bdc4 },
+      { TEST0("curds and w"), (u_int32_t) 0xbf0b0f },
+      { TEST0("curds and wh"), (u_int32_t) 0x83ff3d },
+      { TEST0("curds and whe"), (u_int32_t) 0xd54252 },
+      { TEST0("curds and whey"), (u_int32_t) 0xa156e9 },
+      { TEST0("curds and whey\n"), (u_int32_t) 0xe2d780 },
+      { TEST("hi"), (u_int32_t) 0x3af6f2 },
+      { TEST0("hi"), (u_int32_t) 0xd234c0 },
+      { TEST("hello"), (u_int32_t) 0x9f2ce4 },
+      { TEST0("hello"), (u_int32_t) 0x935133 },
+      { TEST("\xff\x00\x00\x01"), (u_int32_t) 0x8fb8a9 },
+      { TEST("\x01\x00\x00\xff"), (u_int32_t) 0x69f34b },
+      { TEST("\xff\x00\x00\x02"), (u_int32_t) 0x8fb375 },
+      { TEST("\x02\x00\x00\xff"), (u_int32_t) 0xef1266 },
+      { TEST("\xff\x00\x00\x03"), (u_int32_t) 0x8fb585 },
+      { TEST("\x03\x00\x00\xff"), (u_int32_t) 0xc3bfd1 },
+      { TEST("\xff\x00\x00\x04"), (u_int32_t) 0x8fb031 },
+      { TEST("\x04\x00\x00\xff"), (u_int32_t) 0xe4d46f },
+      { TEST("\x40\x51\x4e\x44"), (u_int32_t) 0x17906a },
+      { TEST("\x44\x4e\x51\x40"), (u_int32_t) 0x0bfece },
+      { TEST("\x40\x51\x4e\x4a"), (u_int32_t) 0x178d02 },
+      { TEST("\x4a\x4e\x51\x40"), (u_int32_t) 0xaddad9 },
+      { TEST("\x40\x51\x4e\x54"), (u_int32_t) 0x17a9ca },
+      { TEST("\x54\x4e\x51\x40"), (u_int32_t) 0x2633a1 },
+      { TEST("127.0.0.1"), (u_int32_t) 0xa3d116 },
+      { TEST0("127.0.0.1"), (u_int32_t) 0xe2328d },
+      { TEST("127.0.0.2"), (u_int32_t) 0xa3cf8c },
+      { TEST0("127.0.0.2"), (u_int32_t) 0xdfb740 },
+      { TEST("127.0.0.3"), (u_int32_t) 0xa3cdfe },
+      { TEST0("127.0.0.3"), (u_int32_t) 0xdd3d03 },
+      { TEST("64.81.78.68"), (u_int32_t) 0x5636ba },
+      { TEST0("64.81.78.68"), (u_int32_t) 0xb80830 },
+      { TEST("64.81.78.74"), (u_int32_t) 0x53e841 },
+      { TEST0("64.81.78.74"), (u_int32_t) 0x16b9a9 },
+      { TEST("64.81.78.84"), (u_int32_t) 0x5b8948 },
+      { TEST0("64.81.78.84"), (u_int32_t) 0x1a202b },
+      { TEST("feedface"), (u_int32_t) 0x88b139 },
+      { TEST0("feedface"), (u_int32_t) 0x2f0186 },
+      { TEST("feedfacedaffdeed"), (u_int32_t) 0x364109 },
+      { TEST0("feedfacedaffdeed"), (u_int32_t) 0x69b55d },
+      { TEST("feedfacedeadbeef"), (u_int32_t) 0x7604b9 },
+      { TEST0("feedfacedeadbeef"), (u_int32_t) 0xc8bd3c },
+      { TEST("line 1\nline 2\nline 3"), (u_int32_t) 0xb4eab4 },
+      { TEST("chongo <Landon Curt Noll> /\\../\\"), (u_int32_t) 0x4e927c },
+      { TEST0("chongo <Landon Curt Noll> /\\../\\"), (u_int32_t) 0xb140dd },
+      { TEST("chongo (Landon Curt Noll) /\\../\\"), (u_int32_t) 0x1b25e1 },
+      { TEST0("chongo (Landon Curt Noll) /\\../\\"), (u_int32_t) 0xbb59c8 },
+      { TEST("http://antwrp.gsfc.nasa.gov/apod/astropix.html"), (u_int32_t) 0x524a34 },
+      { TEST("http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash"), (u_int32_t) 0x16ef98 },
+      { TEST("http://epod.usra.edu/"), (u_int32_t) 0x648bd3 },
+      { TEST("http://exoplanet.eu/"), (u_int32_t) 0xa4bc83 },
+      { TEST("http://hvo.wr.usgs.gov/cam3/"), (u_int32_t) 0x53ae47 },
+      { TEST("http://hvo.wr.usgs.gov/cams/HMcam/"), (u_int32_t) 0x302859 },
+      { TEST("http://hvo.wr.usgs.gov/kilauea/update/deformation.html"), (u_int32_t) 0x6deda7 },
+      { TEST("http://hvo.wr.usgs.gov/kilauea/update/images.html"), (u_int32_t) 0x36db15 },
+      { TEST("http://hvo.wr.usgs.gov/kilauea/update/maps.html"), (u_int32_t) 0x9d33fc },
+      { TEST("http://hvo.wr.usgs.gov/volcanowatch/current_issue.html"), (u_int32_t) 0xbb6ce2 },
+      { TEST("http://neo.jpl.nasa.gov/risk/"), (u_int32_t) 0xf83893 },
+      { TEST("http://norvig.com/21-days.html"), (u_int32_t) 0x08bf51 },
+      { TEST("http://primes.utm.edu/curios/home.php"), (u_int32_t) 0xcc8e5f },
+      { TEST("http://slashdot.org/"), (u_int32_t) 0xe20f9f },
+      { TEST("http://tux.wr.usgs.gov/Maps/155.25-19.5.html"), (u_int32_t) 0xe97f2e },
+      { TEST("http://volcano.wr.usgs.gov/kilaueastatus.php"), (u_int32_t) 0x37b27b },
+      { TEST("http://www.avo.alaska.edu/activity/Redoubt.php"), (u_int32_t) 0x9e874a },
+      { TEST("http://www.dilbert.com/fast/"), (u_int32_t) 0xe63f5a },
+      { TEST("http://www.fourmilab.ch/gravitation/orbits/"), (u_int32_t) 0xb50b11 },
+      { TEST("http://www.fpoa.net/"), (u_int32_t) 0xd678e6 },
+      { TEST("http://www.ioccc.org/index.html"), (u_int32_t) 0xd5b723 },
+      { TEST("http://www.isthe.com/cgi-bin/number.cgi"), (u_int32_t) 0x450bb7 },
+      { TEST("http://www.isthe.com/chongo/bio.html"), (u_int32_t) 0x72d79d },
+      { TEST("http://www.isthe.com/chongo/index.html"), (u_int32_t) 0x06679c },
+      { TEST("http://www.isthe.com/chongo/src/calc/lucas-calc"), (u_int32_t) 0x52e15c },
+      { TEST("http://www.isthe.com/chongo/tech/astro/venus2004.html"), (u_int32_t) 0x9664f7 },
+      { TEST("http://www.isthe.com/chongo/tech/astro/vita.html"), (u_int32_t) 0x3258b6 },
+      { TEST("http://www.isthe.com/chongo/tech/comp/c/expert.html"), (u_int32_t) 0xed6ea7 },
+      { TEST("http://www.isthe.com/chongo/tech/comp/calc/index.html"), (u_int32_t) 0x7d7ce2 },
+      { TEST("http://www.isthe.com/chongo/tech/comp/fnv/index.html"), (u_int32_t) 0xc71ba1 },
+      { TEST("http://www.isthe.com/chongo/tech/math/number/howhigh.html"), (u_int32_t) 0x84f14b },
+      { TEST("http://www.isthe.com/chongo/tech/math/number/number.html"), (u_int32_t) 0x8ecf2e },
+      { TEST("http://www.isthe.com/chongo/tech/math/prime/mersenne.html"), (u_int32_t) 0x94f673 },
+      { TEST("http://www.isthe.com/chongo/tech/math/prime/mersenne.html#largest"), (u_int32_t) 0x970112 },
+      { TEST("http://www.lavarnd.org/cgi-bin/corpspeak.cgi"), (u_int32_t) 0x6e172a },
+      { TEST("http://www.lavarnd.org/cgi-bin/haiku.cgi"), (u_int32_t) 0xf8f6e7 },
+      { TEST("http://www.lavarnd.org/cgi-bin/rand-none.cgi"), (u_int32_t) 0xf58843 },
+      { TEST("http://www.lavarnd.org/cgi-bin/randdist.cgi"), (u_int32_t) 0x17b6b2 },
+      { TEST("http://www.lavarnd.org/index.html"), (u_int32_t) 0xad4cfb },
+      { TEST("http://www.lavarnd.org/what/nist-test.html"), (u_int32_t) 0x256811 },
+      { TEST("http://www.macosxhints.com/"), (u_int32_t) 0xb18dd8 },
+      { TEST("http://www.mellis.com/"), (u_int32_t) 0x61c153 },
+      { TEST("http://www.nature.nps.gov/air/webcams/parks/havoso2alert/havoalert.cfm"), (u_int32_t) 0x47d20d },
+      { TEST("http://www.nature.nps.gov/air/webcams/parks/havoso2alert/timelines_24.cfm"), (u_int32_t) 0x8b689f },
+      { TEST("http://www.paulnoll.com/"), (u_int32_t) 0xd2a40b },
+      { TEST("http://www.pepysdiary.com/"), (u_int32_t) 0x549b0a },
+      { TEST("http://www.sciencenews.org/index/home/activity/view"), (u_int32_t) 0xe1b55b },
+      { TEST("http://www.skyandtelescope.com/"), (u_int32_t) 0x0cd3d1 },
+      { TEST("http://www.sput.nl/~rob/sirius.html"), (u_int32_t) 0x471605 },
+      { TEST("http://www.systemexperts.com/"), (u_int32_t) 0x5eef10 },
+      { TEST("http://www.tq-international.com/phpBB3/index.php"), (u_int32_t) 0xed3629 },
+      { TEST("http://www.travelquesttours.com/index.htm"), (u_int32_t) 0x624952 },
+      { TEST("http://www.wunderground.com/global/stations/89606.html"), (u_int32_t) 0x9b8688 },
+      { TEST(R10("21701")), (u_int32_t) 0x15e25f },
+      { TEST(R10("M21701")), (u_int32_t) 0xa98d05 },
+      { TEST(R10("2^21701-1")), (u_int32_t) 0xdf8bcc },
+      { TEST(R10("\x54\xc5")), (u_int32_t) 0x1e9051 },
+      { TEST(R10("\xc5\x54")), (u_int32_t) 0x3f70db },
+      { TEST(R10("23209")), (u_int32_t) 0x95aedb },
+      { TEST(R10("M23209")), (u_int32_t) 0xa7f7d7 },
+      { TEST(R10("2^23209-1")), (u_int32_t) 0x3bc660 },
+      { TEST(R10("\x5a\xa9")), (u_int32_t) 0x610967 },
+      { TEST(R10("\xa9\x5a")), (u_int32_t) 0x157785 },
+      { TEST(R10("391581216093")), (u_int32_t) 0x2b2800 },
+      { TEST(R10("391581*2^216093-1")), (u_int32_t) 0x8239ef },
+      { TEST(R10("\x05\xf9\x9d\x03\x4c\x81")), (u_int32_t) 0x5869f5 },
+      { TEST(R10("FEDCBA9876543210")), (u_int32_t) 0x415c76 },
+      { TEST(R10("\xfe\xdc\xba\x98\x76\x54\x32\x10")), (u_int32_t) 0xe4ff6f },
+      { TEST(R10("EFCDAB8967452301")), (u_int32_t) 0xb7977d },
+      { TEST(R10("\xef\xcd\xab\x89\x67\x45\x23\x01")), (u_int32_t) 0xa43a7b },
+      { TEST(R10("0123456789ABCDEF")), (u_int32_t) 0xb3be1e },
+      { TEST(R10("\x01\x23\x45\x67\x89\xab\xcd\xef")), (u_int32_t) 0x777aaf },
+      { TEST(R10("1032547698BADCFE")), (u_int32_t) 0x21c38a },
+      { TEST(R10("\x10\x32\x54\x76\x98\xba\xdc\xfe")), (u_int32_t) 0x9d0839 },
+      { TEST(R500("\x00")), (u_int32_t) 0x823d2f },
+      { TEST(R500("\x07")), (u_int32_t) 0xa27250 },
+      { TEST(R500("~")), (u_int32_t) 0xc5c656 },
+      { TEST(R500("\x7f")), (u_int32_t) 0x3b0800 },
+      { NULL, 0 } /* MUST BE LAST */
+   };
+
+   for (i = 0; i < 203; ++i) {
+      if (fnv_24a_str((char*)(v[i].str.buf), (v[i].str.len)) != v[i].hash) {
+         fprintf (stderr, "(%u) String:   %s\n", i, (char *) (v[i].str.buf));
+         fprintf (stderr, "Computed hash: %u\n",
+                  fnv_24a_str ((char *) (v[i].str.buf), (v[i].str.len)));
+         fprintf (stderr, "Actual hash:   %u\n\n", v[i].hash);
+      }
+   }
+}
+
+void
+test_fnv_install (TestSuite *suite)
+{
+   TestSuite_Add (suite, "/fnv/compare", test_fnv_compare_vals);
+}

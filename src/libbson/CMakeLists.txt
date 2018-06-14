@@ -162,6 +162,7 @@ set (SOURCES
    ${PROJECT_SOURCE_DIR}/src/bson/bson-context.c
    ${PROJECT_SOURCE_DIR}/src/bson/bson-decimal128.c
    ${PROJECT_SOURCE_DIR}/src/bson/bson-error.c
+   ${PROJECT_SOURCE_DIR}/src/bson/bson-fnv.c
    ${PROJECT_SOURCE_DIR}/src/bson/bson-iso8601.c
    ${PROJECT_SOURCE_DIR}/src/bson/bson-iter.c
    ${PROJECT_SOURCE_DIR}/src/bson/bson-json.c
@@ -192,6 +193,7 @@ set (HEADERS
    ${PROJECT_SOURCE_DIR}/src/bson/bson-endian.h
    ${PROJECT_SOURCE_DIR}/src/bson/bson-error.h
    ${PROJECT_SOURCE_DIR}/src/bson/bson.h
+   ${PROJECT_SOURCE_DIR}/src/bson/bson-fnv.h
    ${PROJECT_SOURCE_DIR}/src/bson/bson-iter.h
    ${PROJECT_SOURCE_DIR}/src/bson/bson-json.h
    ${PROJECT_SOURCE_DIR}/src/bson/bson-keys.h
