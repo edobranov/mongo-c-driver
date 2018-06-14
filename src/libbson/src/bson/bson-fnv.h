@@ -11,4 +11,4 @@
 
 #include <sys/types.h>
 
-u_int32_t fnv_24a_str (char *str, unsigned len);
+u_int32_t fnv_24a_str (char *str);

@@ -47,19 +47,18 @@
  *       hval arg on the first call to either fnv_32a_buf() or fnv_32a_str().
  */
 u_int32_t
-fnv_24a_str (char *str, unsigned len)
+fnv_24a_str (char *str)
 {
    u_int32_t hval = FNV1_32A_INIT;            /* initial 32 bit hash basis */
-   unsigned char *sb = (unsigned char *)str;   /* unsigned string */
-   unsigned char *se = sb + len;
+   unsigned char *s = (unsigned char *)str;   /* unsigned string */
 
    /*
     * FNV-1a hash each octet in the buffer
     */
-   while (sb < se) {
+   while (*s) {
 
       /* xor the bottom with the current octet */
-      hval ^= (u_int32_t)*sb++;
+      hval ^= (u_int32_t)*s++;
 
       /* multiply by the 32 bit FNV magic prime mod 2^32 */
 #if defined(NO_FNV_GCC_OPTIMIZATION)
